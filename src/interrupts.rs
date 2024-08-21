@@ -2,7 +2,10 @@ use lazy_static::lazy_static;
 use pc_keyboard::{layouts::Us104Key, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use pic8259::ChainedPics;
 use spin::Mutex;
-use x86_64::{instructions::port::Port, structures::idt::{InterruptDescriptorTable, InterruptStackFrame}};
+use x86_64::{
+    instructions::port::Port,
+    structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
+};
 
 use crate::{gdt, print, println};
 
@@ -43,13 +46,22 @@ lazy_static! {
     };
 }
 
+#[inline]
+unsafe fn notify_end_of_interrupt(interrupt_id: u8) {
+    PICS.lock().notify_end_of_interrupt(interrupt_id);
+}
+
 extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<Us104Key, ScancodeSet1>> = {
-            Mutex::new(Keyboard::new(ScancodeSet1::new(), Us104Key, HandleControl::Ignore))
+            Mutex::new(Keyboard::new(
+                ScancodeSet1::new(),
+                Us104Key,
+                HandleControl::Ignore,
+            ))
         };
     }
-    
+
     let mut keyboard = KEYBOARD.lock();
     let scancode: u8 = unsafe { Port::new(0x60).read() };
 
@@ -64,8 +76,7 @@ extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     }
 
     unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Keyboard as u8);
+        notify_end_of_interrupt(InterruptIndex::Keyboard as u8);
     }
 }
 
@@ -73,8 +84,7 @@ extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
     print!(".");
 
     unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Timer as u8);
+        notify_end_of_interrupt(InterruptIndex::Timer as u8);
     }
 }
 
