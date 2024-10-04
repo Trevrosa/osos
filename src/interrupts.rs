@@ -19,7 +19,7 @@ pub static PICS: Mutex<ChainedPics> =
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = PIC_1_OFFSET,
-    // timer + 1
+    // PIC_1_OFFSET + 1
     Keyboard,
 }
 
