@@ -1,9 +1,12 @@
+use lazy_static::lazy_static;
 use pc_keyboard::{layouts::Us104Key, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use spin::Mutex;
 use x86_64::{instructions::port::Port, structures::idt::InterruptStackFrame};
-use lazy_static::lazy_static;
 
-use crate::{interrupts::{notify_end_of_interrupt, InterruptIndex}, print, serial_println};
+use crate::{
+    interrupts::{notify_end_of_interrupt, InterruptIndex},
+    print, serial_println,
+};
 
 pub extern "x86-interrupt" fn handler(_frame: InterruptStackFrame) {
     lazy_static! {
@@ -22,7 +25,7 @@ pub extern "x86-interrupt" fn handler(_frame: InterruptStackFrame) {
     if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(key_event) {
             match key {
-                DecodedKey::Unicode(character) => print!("{}", character),
+                DecodedKey::Unicode(character) => print!("{character}"),
                 // not char keys
                 DecodedKey::RawKey(key) => serial_println!("{key:?}"),
             };

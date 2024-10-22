@@ -1,14 +1,12 @@
+mod breakpoint;
+mod double_fault;
 mod keyboard;
 mod timer;
-mod double_fault;
-mod breakpoint;
 
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin::Mutex;
-use x86_64::
-    structures::idt::InterruptDescriptorTable
-;
+use x86_64::structures::idt::InterruptDescriptorTable;
 
 use crate::gdt;
 
