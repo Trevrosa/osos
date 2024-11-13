@@ -25,7 +25,7 @@ harness = false
 panic = "abort"
 
 [dependencies]
-bootloader = "0.9"
+bootloader = { version = "0.9", features = ["map_physical_memory"] }
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
 pc-keyboard = "0.7"
 pic8259 = "0.10.1"

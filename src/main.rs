@@ -6,7 +6,8 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use osos::{print, println, serial_println};
+use bootloader::{entry_point, BootInfo};
+use osos::{memory, print, println, serial_println};
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -21,8 +22,9 @@ fn panic(info: &PanicInfo) -> ! {
     osos::test_panic_handler(info);
 }
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(kernel_main);
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     print!("Hello, World!");
     print!("!!!~ ");
 
@@ -30,6 +32,27 @@ pub extern "C" fn _start() -> ! {
 
     // init stuf
     osos::init();
+
+    let l4_table = unsafe {
+        let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+        memory::active_level_4_table(phys_mem_offset)
+    };
+
+    for (i, entry) in l4_table.iter().enumerate() {
+        if !entry.is_unused() {
+            println!("L4 Entry {i}: {entry:?}");
+            
+            let new = entry.frame().unwrap().start_address();
+            let newv = new.as_u64() + boot_info.physical_memory_offset;
+            let ptr = VirtAddr;
+        }
+    }
+    
+    // access memory outside our kernel
+    // let a = 0xdeadbeef as *mut u8;
+    // unsafe {
+    //     *a = 42;
+    // }
 
     unsafe {
         println!("{}", *(0xfe0e as *const usize));

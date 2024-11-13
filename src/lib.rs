@@ -12,6 +12,8 @@ pub mod vga;
 pub mod gdt;
 pub mod interrupts;
 
+pub mod memory;
+
 use core::{any, panic::PanicInfo};
 
 use x86_64::instructions;
@@ -51,8 +53,10 @@ pub fn runner(tests: &[&dyn Testable]) {
 }
 
 #[cfg(test)]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+bootloader::entry_point!(test_kernel_main);
+
+#[cfg(test)]
+fn test_kernel_main() -> ! {
     interrupts::init_idt();
     test_main();
     hlt_loop();

@@ -1,6 +1,7 @@
 mod breakpoint;
 mod double_fault;
 mod keyboard;
+mod page_fault;
 mod timer;
 
 use lazy_static::lazy_static;
@@ -32,13 +33,14 @@ lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
 
-        idt.breakpoint.set_handler_fn(breakpoint::handler);
-
         unsafe {
             idt.double_fault
                 .set_handler_fn(double_fault::handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX as u16);
         }
+
+        idt.page_fault.set_handler_fn(page_fault::handler);
+        idt.breakpoint.set_handler_fn(breakpoint::handler);
 
         idt[InterruptIndex::Timer as usize].set_handler_fn(timer::handler);
         idt[InterruptIndex::Keyboard as usize].set_handler_fn(keyboard::handler);
