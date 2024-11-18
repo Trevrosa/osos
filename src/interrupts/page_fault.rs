@@ -14,6 +14,6 @@ pub extern "x86-interrupt" fn handler(
     println!("acessed address: {:?}", Cr2::read());
     println!("error code: {error_code:?}");
     println!("{stack_frame:#?}");
-    
+
     hlt_loop();
 }

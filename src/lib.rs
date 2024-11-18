@@ -47,7 +47,7 @@ impl<T: Fn()> Testable for T {
 pub fn runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
-        test.run()
+        test.run();
     }
     qemu::exit(qemu::ExitCode::Success);
 }
