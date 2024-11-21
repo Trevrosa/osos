@@ -1,14 +1,14 @@
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
-        page_table::FrameError::{FrameNotPresent, HugeFrame},
-        PageTable,
+        FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PageTableFlags, PhysFrame,
+        Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 
 /// Return a mutable reference to the active level 4 table
-pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
+unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
     // Cr3: control register 3 = contains the physical address of the highest level page table
     let (level_4_table_frame, _cr3flags) = Cr3::read();
 
@@ -19,40 +19,38 @@ pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static
     &mut *page_table_ptr
 }
 
-/// Translate a given virtual address to a mapped physical address
-/// or `None` if the address is not mapped.
-/// 
-/// # Safety
-/// 
-/// The caller must guarantee that the complete physical memory
-/// is mapped to virtual memory at the passed `phys_offset`.
-pub unsafe fn translate_addr(addr: VirtAddr, phys_offset: VirtAddr) -> Option<PhysAddr> {
-    translate_addr_inner(addr, phys_offset)
+/// Frame Allocator that only returns `None`
+pub struct EmptyFrameAllocator;
+
+unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+        None
+    }
 }
 
-/// Inner function for `translate_addr`.
-fn translate_addr_inner(addr: VirtAddr, phys_offset: VirtAddr) -> Option<PhysAddr> {
-    let table_indexes = [
-        addr.p4_index(),
-        addr.p3_index(),
-        addr.p2_index(),
-        addr.p1_index(),
-    ];
-    let (mut frame, _) = Cr3::read();
+/// Initialize a [`OffsetPageTable`]
+///
+/// # Safety
+///
+/// - This method may only be called once to avoid aliasing `&mut` references.
+/// - The caller must ensure the complete physical memory is mapped to virtual memory at the `physical_memory_offset` given.
+pub unsafe fn init_offset_table(phys_offset: VirtAddr) -> OffsetPageTable<'static> {
+    let level_4_table = active_level_4_table(phys_offset);
+    OffsetPageTable::new(level_4_table, phys_offset)
+}
 
-    for &index in &table_indexes {
-        let virt = phys_offset + frame.start_address().as_u64();
+pub fn example_mapping(
+    page: Page,
+    mapper: &mut OffsetPageTable,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) {
+    let frame: PhysFrame = PhysFrame::containing_address(PhysAddr::new(0xb8000)); // vga buffer
+    let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
-        let table = virt.as_ptr();
-        let table: &PageTable = unsafe { &*table };
+    let map_to_result = unsafe {
+        // not safe
+        mapper.map_to(page, frame, flags, frame_allocator)
+    };
 
-        let entry = &table[index];
-        frame = match entry.frame() {
-            Ok(frame) => frame,
-            Err(FrameNotPresent) => return None,
-            Err(HugeFrame) => panic!("hugepages not suported.."),
-        };
-    }
-
-    Some(frame.start_address() + u64::from(addr.page_offset()))
+    map_to_result.expect("map_to failed").flush();
 }
