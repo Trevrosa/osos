@@ -9,7 +9,7 @@ use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use osos::{memory, print, println, serial_println};
 use x86_64::{
-    structures::paging::{Page, Translate},
+    structures::paging::Page,
     VirtAddr,
 };
 
