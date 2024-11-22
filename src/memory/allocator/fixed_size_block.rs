@@ -1,6 +1,6 @@
 use core::{alloc::{GlobalAlloc, Layout}, mem, ptr::{self, NonNull}};
 
-use crate::{println, serial_println};
+use crate::println;
 
 use super::Locked;
 
@@ -70,16 +70,11 @@ unsafe impl GlobalAlloc for Locked<Allocator> {
                     let block_align = block_size;
 
                     let layout = Layout::from_size_align(block_size, block_align)
-                        .expect("failed to create layout when allocating");
-
-                    serial_println!("WARNING: had to use fallback allocator on alloc of size {} (probably first alloc size, list_head was None)", layout.size());
+                        .expect("ERROR: failed to create layout when allocating");
                     allocator.fallback_alloc(layout)
                 }
             }
-            None => {
-                serial_println!("WARNING: had to use fallback allocator on alloc of size {} (no block sizes fit)", layout.size());
-                allocator.fallback_alloc(layout)
-            }
+            None => allocator.fallback_alloc(layout)
         }
     }
 
@@ -104,7 +99,6 @@ unsafe impl GlobalAlloc for Locked<Allocator> {
             None => {
                 let ptr = NonNull::new(ptr).unwrap();
 
-                serial_println!("WARNING: had to use fallback allocator on dealloc of size {} (no block sizes fit)", layout.size());
                 allocator.fallback_allocator.deallocate(ptr, layout);
             }
         }
