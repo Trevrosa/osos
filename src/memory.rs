@@ -20,15 +20,6 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
     &mut *page_table_ptr
 }
 
-/// Frame Allocator that only returns `None`
-pub struct EmptyFrameAllocator;
-
-unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        None
-    }
-}
-
 pub struct BootInfoFrameAllocator {
     memory_map: &'static MemoryMap,
     next: usize,
@@ -72,7 +63,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 /// # Safety
 ///
 /// - This method may only be called once to avoid aliasing `&mut` references.
-/// - The caller must ensure the complete physical memory is mapped to virtual memory at the `physical_memory_offset` given.
+/// - The caller must ensure the complete physical memory is mapped to virtual memory at the `phys_offset` given.
 pub unsafe fn init_offset_table(phys_offset: VirtAddr) -> OffsetPageTable<'static> {
     let level_4_table = active_level_4_table(phys_offset);
     OffsetPageTable::new(level_4_table, phys_offset)

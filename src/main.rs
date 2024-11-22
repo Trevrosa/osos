@@ -39,15 +39,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     let phys_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init_offset_table(phys_offset) };
-    let mut allocator = memory::EmptyFrameAllocator;
+    let mut allocator = unsafe { memory::BootInfoFrameAllocator::new(&boot_info.memory_map) };
 
     let page = Page::containing_address(VirtAddr::zero());
     memory::example_mapping(page, &mut mapper, &mut allocator);
 
     let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-    // D0 = pink bg, black fg
-    // 50 = ascii P
     unsafe {
+        // D0 = pink bg, black fg
+        // 50 = ascii P
         page_ptr.offset(400).write_volatile(0xD050_D050);
     }
 
