@@ -71,6 +71,7 @@ impl Deref for ColorCode {
 }
 
 impl ColorCode {
+    #[must_use]
     pub fn new(foreground: Color, background: Color) -> Self {
         // first 4 bits is background, last 4 is foreground
         // eg. for ColorCode 10100010, the bg is 1010 (10, light green), while the fg is 0010 (2, green)

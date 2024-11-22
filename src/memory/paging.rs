@@ -31,6 +31,7 @@ impl BootInfoFrameAllocator {
     /// # Safety
     ///
     /// Caller must guarantee the passed memory map is valid. (all frames marked as `Usable` are actually unused.)
+    #[must_use]
     pub unsafe fn new(memory_map: &'static MemoryMap) -> Self {
         Self {
             memory_map,
@@ -69,11 +70,13 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 ///
 /// - This method may only be called once to avoid aliasing `&mut` references.
 /// - The caller must ensure the complete physical memory is mapped to virtual memory at the `phys_offset` given.
+#[must_use]
 pub unsafe fn init_offset_table(phys_offset: VirtAddr) -> OffsetPageTable<'static> {
     let level_4_table = active_level_4_table(phys_offset);
     OffsetPageTable::new(level_4_table, phys_offset)
 }
 
+#[allow(clippy::missing_panics_doc, reason = "use as example only")]
 pub fn example_mapping(
     page: Page,
     mapper: &mut OffsetPageTable,

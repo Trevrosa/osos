@@ -49,26 +49,34 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut suse = alloc::vec![1, 2, 3];
     print!(" {suse:?}, ");
     suse.push(10);
-    println!("now {suse:?}");
+    print!("now {suse:?}, ");
+    suse.pop();
+    suse.pop();
+    println!("now {suse:?}!");
 
     // test example mapping
     let page = Page::containing_address(VirtAddr::zero());
-    paging::example_mapping(page, &mut mapper, &mut frame_allocator);
     let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+    
+    paging::example_mapping(page, &mut mapper, &mut frame_allocator);
+
     unsafe {
-        // D0 = pink bg, black fg
-        // 50 = ascii P
-        page_ptr.offset(400).write_volatile(0xD050_D050);
+        // each 4 hex digit is a vga char
+        // first 2 hex digits (from left) = fg and bg bytes (see vga::Char)
+        // last 2 hex digits (from left) = ascii code point
+        page_ptr.offset(200).write_volatile(0x0020_D354_D050_D041);
+        page_ptr.offset(201).write_volatile(0x0020_D354_D050_D041);
+        page_ptr.offset(202).write_volatile(0x0000_D354_D050_D041);
     }
 
     unsafe {
-        println!("{}", *(0xfe0e as *const usize));
+        println!("\n{}", *(0xfe0e as *const usize));
     }
 
     #[cfg(test)]
     test_main();
 
-    println!("End");
+    println!("We are done");
 
     osos::hlt_loop();
 }

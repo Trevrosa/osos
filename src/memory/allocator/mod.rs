@@ -1,6 +1,7 @@
-use core::{alloc::GlobalAlloc, ptr::null_mut};
+pub mod fixed_size_block;
 
-use linked_list_allocator::LockedHeap;
+use core::ops::Deref;
+
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
@@ -12,19 +13,33 @@ pub const HEAP_START: usize = 0x4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 kib
 
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: Locked<fixed_size_block::Allocator> = Locked::new(fixed_size_block::Allocator::new());
 
-pub struct Dummy;
+/// A wrapper around spin::Mutex to permit trait implementations.
+pub struct Locked<A>(spin::Mutex<A>);
 
-unsafe impl GlobalAlloc for Dummy {
-    unsafe fn alloc(&self, _layout: core::alloc::Layout) -> *mut u8 {
-        null_mut()
+impl<A> Locked<A> {
+    pub const fn new(inner: A) -> Self {
+        Locked(spin::Mutex::new(inner))
     }
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: core::alloc::Layout) {
-        panic!("boop")
+
+    pub fn lock(&self) -> spin::MutexGuard<A> {
+        self.0.lock()
     }
 }
 
+impl<A> Deref for Locked<A> {
+    type Target = spin::Mutex<A>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// Initialize the heap
+///
+/// # Errors
+///
+/// Will error if the memory mapping fails. See [`MapToError`]
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,

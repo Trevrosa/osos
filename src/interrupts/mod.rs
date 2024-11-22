@@ -34,6 +34,9 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
 
         unsafe {
+            #[allow(clippy::cast_possible_truncation)]
+            // reason: if it truncates we cant do anything.
+            // DOUBLE_FAULT_IST_INDEX is 0 anyway
             idt.double_fault
                 .set_handler_fn(double_fault::handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX as u16);
