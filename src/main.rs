@@ -5,13 +5,15 @@
 #![test_runner(osos::runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use osos::{memory, print, println, serial_println};
-use x86_64::{
-    structures::paging::Page,
-    VirtAddr,
+use osos::{
+    memory::{allocator, paging},
+    print, println, serial_println,
 };
+use x86_64::{structures::paging::Page, VirtAddr};
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -38,37 +40,26 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     osos::init();
 
     let phys_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut mapper = unsafe { memory::init_offset_table(phys_offset) };
-    let mut allocator = unsafe { memory::BootInfoFrameAllocator::new(&boot_info.memory_map) };
+    let mut mapper = unsafe { paging::init_offset_table(phys_offset) };
+    let mut frame_allocator = unsafe { paging::BootInfoFrameAllocator::new(&boot_info.memory_map) };
 
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
+
+    // test heap
+    let mut suse = alloc::vec![1, 2, 3];
+    print!(" {suse:?}, ");
+    suse.push(10);
+    println!("now {suse:?}");
+
+    // test example mapping
     let page = Page::containing_address(VirtAddr::zero());
-    memory::example_mapping(page, &mut mapper, &mut allocator);
-
+    paging::example_mapping(page, &mut mapper, &mut frame_allocator);
     let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
     unsafe {
         // D0 = pink bg, black fg
         // 50 = ascii P
         page_ptr.offset(400).write_volatile(0xD050_D050);
     }
-
-    // let addrs = [
-    //     // identity mapped vga buffer page
-    //     0xb8000,
-    //     // some code page
-    //     0x0020_1008,
-    //     // some stack page
-    //     0x0100_0020_1a10,
-    //     // virt addr mapped to phys addr 0
-    //     boot_info.physical_memory_offset,
-    // ];
-
-    // let mapper = unsafe { memory::init_offset_table(phys_offset) };
-
-    // for &addr in &addrs {
-    //     let virt = VirtAddr::new(addr);
-    //     let phys = mapper.translate_addr(virt);
-    //     println!("{virt:?} -> {phys:?}");
-    // }
 
     unsafe {
         println!("{}", *(0xfe0e as *const usize));

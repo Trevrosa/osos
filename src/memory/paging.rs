@@ -38,13 +38,18 @@ impl BootInfoFrameAllocator {
         }
     }
 
+    /// Get the usable frames from the mapped memory regions
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
-        let regions = self.memory_map.iter();
-        let usable = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
+        let usable = self
+            .memory_map
+            .iter()
+            .filter(|r| r.region_type == MemoryRegionType::Usable);
 
-        let addr_ranges = usable.map(|r| r.range.start_addr()..r.range.end_addr());
-        // page size is 4kib (4096 bytes)
-        let frame_addrs = addr_ranges.flat_map(|r| r.step_by(4096));
+        let frame_addrs = usable
+            // address regions
+            .map(|r| r.range.start_addr()..r.range.end_addr())
+            // step 4 kib (4096 bytes) to find the frame start addrs
+            .flat_map(|r| r.step_by(4096));
 
         frame_addrs.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }

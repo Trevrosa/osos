@@ -56,7 +56,9 @@ pub fn runner(tests: &[&dyn Testable]) {
 bootloader::entry_point!(test_kernel_main);
 
 #[cfg(test)]
-fn test_kernel_main() -> ! {
+fn test_kernel_main(boot_info: &'static bootloader::BootInfo) -> ! {
+    use bootloader::BootInfo;
+
     interrupts::init_idt();
     test_main();
     hlt_loop();
