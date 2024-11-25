@@ -1,2 +1,3 @@
 [toolchain]
-channel = "nightly"
+# after this nightly x86_64 crate stops compiling
+channel = "nightly-2024-11-22"

@@ -14,6 +14,8 @@ pub mod interrupts;
 
 pub mod memory;
 
+pub mod task;
+
 use core::{any, panic::PanicInfo};
 
 use x86_64::instructions;
