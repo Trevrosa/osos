@@ -64,9 +64,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         // each 4 hex digit is a vga char
         // first 2 hex digits (from left) = fg and bg bytes (see vga::Char)
         // last 2 hex digits (from left) = ascii code point
-        page_ptr.offset(400).write_volatile(0x0020_D354_D050_D041);
-        page_ptr.offset(401).write_volatile(0x0020_D354_D050_D041);
-        page_ptr.offset(402).write_volatile(0x0000_D354_D050_D041);
+        page_ptr.offset(400).write_volatile(0xD354_D050_D041);
     }
 
     unsafe {

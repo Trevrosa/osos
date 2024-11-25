@@ -11,7 +11,7 @@ struct ListNode {
 
 /// Block sizes to use 
 /// 
-/// The sizes must be powers of 2 since we use them as block alignment too
+/// The sizes must be powers of 2 since we use them as block alignment too (alignment has to be power of 2)
 const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048];
 
 pub struct Allocator {
