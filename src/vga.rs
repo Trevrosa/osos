@@ -147,7 +147,7 @@ impl Writer {
             });
             self.column_pos += 1;
         }
-     }
+    }
 
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {

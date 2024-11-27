@@ -1,5 +1,9 @@
-use core::{future::Future, pin::Pin, task::{Context, Poll}};
 use alloc::boxed::Box;
+use core::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 pub struct Task {
     future: Pin<Box<dyn Future<Output = ()>>>,
@@ -8,7 +12,7 @@ pub struct Task {
 impl Task {
     fn new(future: impl Future<Output = ()> + 'static) -> Self {
         Self {
-            future: Box::pin(future)
+            future: Box::pin(future),
         }
     }
 

@@ -61,19 +61,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     }
     println!("now {suse:?}!");
 
-    // test example mapping
-    let page = Page::containing_address(VirtAddr::zero());
-    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-    
-    paging::example_mapping(page, &mut mapper, &mut frame_allocator);
-
-    unsafe {
-        // each 4 hex digit is a vga char
-        // first 2 hex digits (from left) = fg and bg bytes (see vga::Char)
-        // last 2 hex digits (from left) = ascii code point
-        page_ptr.offset(400).write_volatile(0xD354_D050_D041);
-    }
-
     unsafe {
         println!("\n{}", *(0xfe0e as *const usize));
     }
@@ -83,5 +70,30 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     println!("We are done");
 
-    osos::hlt_loop();
+    // test example mapping
+    let page = Page::containing_address(VirtAddr::zero());
+    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+
+    paging::example_mapping(page, &mut mapper, &mut frame_allocator);
+
+    for _ in 0..5000000 {
+        x86_64::instructions::nop();
+    }
+
+    let mut i = 1;
+    loop {
+        unsafe {
+            // each 4 hex digit is a vga char
+            // first 2 hex digits (from left) = fg and bg bytes (see vga::Char)
+            // last 2 hex digits (from left) = ascii code point
+            page_ptr.offset(i).write_volatile(0xD354_D050_D041);
+        }
+
+        for _ in 0..10000 {
+            x86_64::instructions::nop();
+        }
+        i += 1;
+    }
+
+    // osos::hlt_loop();
 }
