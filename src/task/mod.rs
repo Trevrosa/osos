@@ -1,3 +1,5 @@
+pub mod executor;
+
 use alloc::boxed::Box;
 use core::{
     future::Future,
@@ -10,7 +12,7 @@ pub struct Task {
 }
 
 impl Task {
-    fn new(future: impl Future<Output = ()> + 'static) -> Self {
+    pub fn new(future: impl Future<Output = ()> + 'static) -> Self {
         Self {
             future: Box::pin(future),
         }
