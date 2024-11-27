@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+use alloc::{format, string::String};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use osos::{
@@ -62,19 +63,17 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     }
     println!("now {suse:?}!");
 
-    unsafe {
-        println!("\n{}", *(0xfe0e as *const usize));
-    }
-
     #[cfg(test)]
     test_main();
 
-    async fn number() -> u32 {
-        12
+    async fn text() -> String {
+        unsafe {
+            format!("{}", *(0xfe0e as *const usize))
+        }
     }
 
     async fn test_async() {
-        let num = number().await;
+        let num = text().await;
         println!("async {num}");
     }
 
@@ -85,7 +84,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("We are done");
 
     // test example mapping
-    // let page = Page::containing_address(VirtAddr::zero());
+    // let page = x86_64::structures::paging::Page::containing_address(VirtAddr::zero());
     // let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
 
     // paging::example_mapping(page, &mut mapper, &mut frame_allocator);
@@ -94,7 +93,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     //     x86_64::instructions::nop();
     // }
 
-    // let mut i = ;
+    // let mut i = 1;
     // loop {
     //     unsafe {
     //         // each 4 hex digit is a vga char
