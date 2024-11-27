@@ -5,13 +5,13 @@ use alloc::collections::vec_deque::VecDeque;
 use super::Task;
 
 pub struct SimpleExecutor {
-    task_queue: VecDeque<Task>
+    task_queue: VecDeque<Task>,
 }
 
 impl SimpleExecutor {
     pub fn new() -> Self {
         Self {
-            task_queue: VecDeque::new()
+            task_queue: VecDeque::new(),
         }
     }
 

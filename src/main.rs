@@ -11,9 +11,10 @@ use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use osos::{
     memory::{allocator, paging},
-    print, println, serial_println, task::{executor::SimpleExecutor, Task},
+    print, println, serial_println,
+    task::{executor::SimpleExecutor, Task},
 };
-use x86_64::{structures::paging::Page, VirtAddr};
+use x86_64::VirtAddr;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -76,7 +77,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         let num = number().await;
         println!("async {num}");
     }
-    
+
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(test_async()));
     executor.run();
