@@ -43,7 +43,7 @@ impl Allocator {
     /// - The heap is unused.
     /// - This function is called only once.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
-        self.fallback_allocator.init(heap_start, heap_size);
+        self.fallback_allocator.init(heap_start as *mut u8, heap_size);
     }
 
     fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {

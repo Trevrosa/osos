@@ -5,6 +5,8 @@
 #![test_runner(crate::runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
 pub mod qemu;
 pub mod serial;
 pub mod vga;

@@ -16,8 +16,8 @@ pub const DOUBLE_FAULT_IST_INDEX: usize = 0;
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code = gdt.append(Descriptor::kernel_code_segment());
+        let tss = gdt.append(Descriptor::tss_segment(&TSS));
 
         (gdt, Selectors { code, tss })
     };
@@ -34,7 +34,7 @@ lazy_static! {
             let stack_start = VirtAddr::from_ptr(unsafe { addr_of!(STACK) });
 
             // stack end
-            stack_start + STACK_SIZE
+            stack_start + STACK_SIZE as u64
         };
         tss
     };
