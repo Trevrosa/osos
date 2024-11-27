@@ -49,9 +49,16 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut suse = alloc::vec![1, 2, 3];
     print!(" {suse:?}, ");
     suse.push(10);
+    // sleep some
+    for _ in 0..2000000 {
+        x86_64::instructions::nop();
+    }
     print!("now {suse:?}, ");
     suse.pop();
     suse.pop();
+    for _ in 0..2000000 {
+        x86_64::instructions::nop();
+    }
     println!("now {suse:?}!");
 
     // test example mapping
