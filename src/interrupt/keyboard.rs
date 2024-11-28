@@ -4,7 +4,7 @@ use spin::Mutex;
 use x86_64::{instructions::port::Port, structures::idt::InterruptStackFrame};
 
 use crate::{
-    interrupts::{notify_end_of_interrupt, InterruptIndex},
+    interrupt::{notify_end_of_interrupt, InterruptIndex},
     print, serial_println,
 };
 

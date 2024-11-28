@@ -12,7 +12,7 @@ pub mod serial;
 pub mod vga;
 
 pub mod gdt;
-pub mod interrupts;
+pub mod interrupt;
 
 pub mod memory;
 
@@ -25,8 +25,8 @@ use x86_64::instructions;
 /// initialize what needs to be initialized
 pub fn init() {
     gdt::init();
-    interrupts::init_idt();
-    unsafe { interrupts::PICS.lock().initialize() };
+    interrupt::init_idt();
+    unsafe { interrupt::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 }
 
@@ -63,7 +63,7 @@ bootloader::entry_point!(test_kernel_main);
 fn test_kernel_main(boot_info: &'static bootloader::BootInfo) -> ! {
     use bootloader::BootInfo;
 
-    interrupts::init_idt();
+    interrupt::init_idt();
     test_main();
     hlt_loop();
 }
