@@ -22,7 +22,11 @@ use core::{any, panic::PanicInfo};
 
 use x86_64::instructions;
 
-/// initialize what needs to be initialized
+/// initialize
+/// - gdt
+/// - idt
+/// - PICs
+/// - interrupts
 pub fn init() {
     gdt::init();
     interrupt::init_idt();
