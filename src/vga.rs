@@ -3,21 +3,19 @@ use core::{
     ops::Deref,
 };
 
-use lazy_static::lazy_static;
+use conquer_once::spin::Lazy;
 use spin::Mutex;
 use volatile::Volatile;
 
 const VGA_BUFFER: *mut Buffer = 0xb8000 as *mut Buffer;
 
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = {
-        let color_code = ColorCode::new(Color::Green, Color::Black);
-        let buffer = unsafe { &mut *VGA_BUFFER };
-        let writer = Writer::new(color_code, buffer);
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| {
+    let color_code = ColorCode::new(Color::Green, Color::Black);
+    let buffer = unsafe { &mut *VGA_BUFFER };
+    let writer = Writer::new(color_code, buffer);
 
-        Mutex::new(writer)
-    };
-}
+    Mutex::new(writer)
+});
 
 #[macro_export]
 macro_rules! print {

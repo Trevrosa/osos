@@ -1,4 +1,5 @@
 pub mod executor;
+pub mod keyboard;
 
 use alloc::boxed::Box;
 use core::{

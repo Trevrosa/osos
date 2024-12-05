@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use conquer_once::spin::Lazy;
 use pc_keyboard::{layouts::Us104Key, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use spin::Mutex;
 use x86_64::{instructions::port::Port, structures::idt::InterruptStackFrame};
@@ -8,19 +8,20 @@ use crate::{
     print, serial_println,
 };
 
+static KEYBOARD: Lazy<Mutex<Keyboard<Us104Key, ScancodeSet1>>> = Lazy::new(||{
+    Mutex::new(Keyboard::new(
+        ScancodeSet1::new(),
+        Us104Key,
+        HandleControl::Ignore,
+    ))
+});
+
 pub extern "x86-interrupt" fn handler(_frame: InterruptStackFrame) {
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<Us104Key, ScancodeSet1>> = {
-            Mutex::new(Keyboard::new(
-                ScancodeSet1::new(),
-                Us104Key,
-                HandleControl::Ignore,
-            ))
-        };
-    }
+    
 
     let mut keyboard = KEYBOARD.lock();
     let scancode: u8 = unsafe { Port::new(0x60).read() };
+    
 
     if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(key_event) {

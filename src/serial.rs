@@ -2,17 +2,15 @@
 
 use core::fmt::{self, Write};
 
-use lazy_static::lazy_static;
+use conquer_once::spin::Lazy;
 use spin::Mutex;
 use uart_16550::SerialPort;
 
-lazy_static! {
-    pub static ref SERIAL0: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
-}
+pub static SERIAL0: Lazy<Mutex<SerialPort>> = Lazy::new(|| {
+    let mut serial_port = unsafe { SerialPort::new(0x3F8) };
+    serial_port.init();
+    Mutex::new(serial_port)
+});
 
 #[macro_export]
 macro_rules! serial_print {
