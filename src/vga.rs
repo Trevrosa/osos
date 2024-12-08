@@ -4,6 +4,7 @@ use core::{
 };
 
 use conquer_once::spin::Lazy;
+use log::{LevelFilter, Log};
 use spin::Mutex;
 use volatile::Volatile;
 
@@ -16,6 +17,36 @@ pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| {
 
     Mutex::new(writer)
 });
+
+pub struct Logger {
+    pub verbosity: LevelFilter,
+}
+
+impl Logger {
+    pub const fn new(verbosity: LevelFilter) -> Self {
+        Self { verbosity }
+    }
+}
+
+impl Log for Logger {
+    // no way to flush vga
+    fn flush(&self) {}
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            crate::println!(
+                "{}->{}: {}",
+                record.module_path().unwrap(),
+                record.level(),
+                record.args().as_str().unwrap()
+            )
+        }
+    }
+
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= self.verbosity
+    }
+}
 
 #[macro_export]
 macro_rules! print {

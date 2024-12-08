@@ -33,7 +33,7 @@ static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
         // stack end
         stack_start + STACK_SIZE as u64
     };
-    
+
     tss
 });
 

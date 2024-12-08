@@ -16,7 +16,7 @@ pub const HEAP_SIZE: usize = 100 * 1024; // 100 kib
 static ALLOCATOR: Locked<fixed_size_block::Allocator> =
     Locked::new(fixed_size_block::Allocator::new());
 
-/// A wrapper around spin::Mutex to permit trait implementations.
+/// A wrapper around `spin::Mutex` to permit trait implementations.
 pub struct Locked<A>(spin::Mutex<A>);
 
 impl<A> Locked<A> {

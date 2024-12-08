@@ -4,7 +4,7 @@ use core::{
     ptr::{self, NonNull},
 };
 
-use crate::println;
+use log::error;
 
 use super::Locked;
 
@@ -52,15 +52,14 @@ impl Allocator {
     }
 
     fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {
-        match self.fallback_allocator.allocate_first_fit(layout) {
-            Ok(ptr) => ptr.as_ptr(),
-            Err(_) => {
-                println!(
-                    "ERROR: fallback allocator failed to allocate {} bytes",
-                    layout.size()
-                );
-                ptr::null_mut()
-            }
+        if let Ok(ptr) = self.fallback_allocator.allocate_first_fit(layout) {
+            ptr.as_ptr()
+        } else {
+            error!(
+                "fallback allocator failed to allocate {} bytes",
+                layout.size()
+            );
+            ptr::null_mut()
         }
     }
 }
@@ -69,46 +68,42 @@ unsafe impl GlobalAlloc for Locked<Allocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let mut allocator = self.lock();
 
-        match list_index(&layout) {
-            Some(idx) => {
-                if let Some(node) = allocator.list_heads[idx].take() {
-                    node as *mut ListNode as *mut u8
-                } else {
-                    let block_size = BLOCK_SIZES[idx];
-                    let block_align = block_size;
+        if let Some(idx) = list_index(&layout) {
+            if let Some(node) = allocator.list_heads[idx].take() {
+                node as *mut ListNode as *mut u8
+            } else {
+                let block_size = BLOCK_SIZES[idx];
+                let block_align = block_size;
 
-                    let layout = Layout::from_size_align(block_size, block_align)
-                        .expect("ERROR: failed to create layout when allocating");
-                    allocator.fallback_alloc(layout)
-                }
+                let layout = Layout::from_size_align(block_size, block_align)
+                    .expect("ERROR: failed to create layout when allocating");
+                allocator.fallback_alloc(layout)
             }
-            None => allocator.fallback_alloc(layout),
+        } else {
+            allocator.fallback_alloc(layout)
         }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         let mut allocator = self.lock();
 
-        match list_index(&layout) {
-            Some(index) => {
-                let new_node = ListNode {
-                    next: allocator.list_heads[index].take(),
-                };
+        if let Some(index) = list_index(&layout) {
+            let new_node = ListNode {
+                next: allocator.list_heads[index].take(),
+            };
 
-                // verify that block has size and alignment required for storing node
-                assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
-                assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
+            // verify that block has size and alignment required for storing node
+            assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
+            assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
 
-                let new_node_ptr = ptr as *mut ListNode;
-                new_node_ptr.write(new_node);
+            let new_node_ptr = ptr as *mut ListNode;
+            new_node_ptr.write(new_node);
 
-                allocator.list_heads[index] = Some(&mut *new_node_ptr);
-            }
-            None => {
-                let ptr = NonNull::new(ptr).unwrap();
+            allocator.list_heads[index] = Some(&mut *new_node_ptr);
+        } else {
+            let ptr = NonNull::new(ptr).unwrap();
 
-                allocator.fallback_allocator.deallocate(ptr, layout);
-            }
+            allocator.fallback_allocator.deallocate(ptr, layout);
         }
     }
 }
