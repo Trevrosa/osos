@@ -7,24 +7,26 @@
 
 extern crate alloc;
 
-use alloc::{format, string::String};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use osos::{
     memory::{allocator, paging},
     print, println, serial_println,
-    task::{executor::SimpleExecutor, Task},
-    vga,
+    task::{executor::SimpleExecutor, keyboard, Task},
+    vga::{self, init_logger},
 };
 use x86_64::VirtAddr;
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("{info}");
+    use log::error;
+
+    error!("{info}");
     serial_println!("{info}");
     osos::hlt_loop();
 }
+
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -33,18 +35,17 @@ fn panic(info: &PanicInfo) -> ! {
 
 entry_point!(kernel_main);
 
-const LOGGER: vga::Logger = vga::Logger::new(log::LevelFilter::Warn);
+const LOGGER: vga::Logger = vga::Logger::new(log::LevelFilter::Trace);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    log::set_logger(&LOGGER).expect("failed to initialize vga logger");
-    log::set_max_level(LOGGER.verbosity);
+    init_logger(&LOGGER);
 
     print!("Hello, World!");
-    print!("!!!~ ");
+    println!("!!!~ ");
 
     serial_println!("Hello, serial0!");
 
-    // init stuf
+    // init os stuf
     osos::init();
 
     #[cfg(test)]
@@ -59,7 +60,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // test heap
     {
         let mut suse = alloc::vec![1, 2, 3];
-        print!(" {suse:?}, ");
+        print!("{suse:?}, ");
 
         suse.push(10);
 
@@ -79,47 +80,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("now {suse:?}!");
     }
 
-    // test async
-    {
-        async fn text() -> String {
-            unsafe { format!("{}", *(0xfe0e as *const usize)) }
-        }
-
-        async fn test_async() {
-            let num = text().await;
-            println!("async {num}");
-        }
-
-        let mut executor = SimpleExecutor::new();
-        executor.spawn(Task::new(test_async()));
-        executor.run();
-    }
-
-    // test example memory mapping
-    {
-        let page = x86_64::structures::paging::Page::containing_address(VirtAddr::zero());
-        let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-
-        paging::example_mapping(page, &mut mapper, &mut frame_allocator);
-
-        for _ in 0..5000000 {
-            x86_64::instructions::nop();
-        }
-
-        for i in 1..=500 {
-            unsafe {
-                // each 4 hex digit is a vga char
-                // first 2 hex digits (from left) = fg and bg bytes (see vga::Char)
-                // last 2 hex digits (from left) = ascii code point
-                page_ptr.offset(i).write_volatile(0xD354_D050_D041);
-            }
-
-            for _ in 0..10000 {
-                x86_64::instructions::nop();
-            }
-        }
-    }
-
     log::error!("We are done!");
+
+    let mut executor = SimpleExecutor::new();
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
+
     osos::hlt_loop();
 }
