@@ -1,4 +1,0 @@
-[submodule "x86_64"]
-	path = x86_64
-	url = https://github.com/Trevrosa/x86_64
-	branch = v0.15.2
