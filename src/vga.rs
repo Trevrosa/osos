@@ -10,8 +10,10 @@ use volatile::Volatile;
 
 const VGA_BUFFER: *mut Buffer = 0xb8000 as *mut Buffer;
 
+const COLOR_CODE: (Color, Color) = (Color::Green, Color::Black);
+
 pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| {
-    let color_code = ColorCode::new(Color::Green, Color::Black);
+    let color_code = ColorCode::new(COLOR_CODE.0, COLOR_CODE.1);
     let buffer = unsafe { &mut *VGA_BUFFER };
     let writer = Writer::new(color_code, buffer);
 
@@ -219,7 +221,7 @@ impl Writer {
 
             self.buffer.chars[row][col].write(Char {
                 ascii_char: byte,
-                color_code: ColorCode::new(Color::Green, highlight),
+                color_code: ColorCode::new(COLOR_CODE.0, highlight),
             });
             self.column_pos += 1;
         }
