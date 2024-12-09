@@ -92,7 +92,7 @@ impl Executor {
     fn run_ready_tasks(&mut self) {
         while let Some(task_id) = self.task_queue.pop() {
             let Some(task) = self.tasks.get_mut(&task_id) else {
-                continue
+                continue;
             };
 
             let waker = self

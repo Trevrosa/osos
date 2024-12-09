@@ -49,7 +49,7 @@ impl Log for Logger {
                 log::Level::Info => Color::LightBlue,
                 log::Level::Error => Color::Red,
                 log::Level::Trace => Color::Blue,
-                log::Level::Warn => Color::Yellow
+                log::Level::Warn => Color::Yellow,
             };
 
             let mut lock = WRITER.lock();
@@ -57,11 +57,16 @@ impl Log for Logger {
                 "{}:{}->",
                 record.module_path().unwrap(),
                 record.line().unwrap(),
-            )).unwrap();
+            ))
+            .unwrap();
 
             lock.write_special_str(record.level().as_str(), color);
 
-            lock.write_fmt(format_args!(": {}\n", record.args().as_str().unwrap_or("no msg ??"))).unwrap();
+            lock.write_fmt(format_args!(
+                ": {}\n",
+                record.args().as_str().unwrap_or("no msg ??")
+            ))
+            .unwrap();
         }
     }
 
