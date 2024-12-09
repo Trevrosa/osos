@@ -2,6 +2,7 @@ pub mod fixed_size_block;
 
 use core::ops::Deref;
 
+use log::trace;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
@@ -13,9 +14,10 @@ pub const HEAP_START: usize = 0x4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 kib
 
 #[global_allocator]
-static ALLOCATOR: Locked<fixed_size_block::Allocator> = Locked::new(fixed_size_block::Allocator::new());
+static ALLOCATOR: Locked<fixed_size_block::Allocator> =
+    Locked::new(fixed_size_block::Allocator::new());
 
-/// A wrapper around spin::Mutex to permit trait implementations.
+/// A wrapper around `spin::Mutex` to permit trait implementations.
 pub struct Locked<A>(spin::Mutex<A>);
 
 impl<A> Locked<A> {
@@ -44,9 +46,10 @@ pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) -> Result<(), MapToError<Size4KiB>> {
+    trace!("initialising heap");
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
 
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);

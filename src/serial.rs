@@ -2,21 +2,19 @@
 
 use core::fmt::{self, Write};
 
-use lazy_static::lazy_static;
+use conquer_once::spin::Lazy;
 use spin::Mutex;
 use uart_16550::SerialPort;
 
-lazy_static! {
-    pub static ref SERIAL0: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
-}
+pub static SERIAL0: Lazy<Mutex<SerialPort>> = Lazy::new(|| {
+    let mut serial_port = unsafe { SerialPort::new(0x3F8) };
+    serial_port.init();
+    Mutex::new(serial_port)
+});
 
 #[macro_export]
 macro_rules! serial_print {
-    ($($arg:tt)*) => ($crate::serial::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::serial::private_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -26,7 +24,7 @@ macro_rules! serial_println {
 }
 
 #[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
+pub fn private_print(args: fmt::Arguments) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         SERIAL0.lock().write_fmt(args).unwrap();
     });

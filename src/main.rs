@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic)]
+#![deny(clippy::panic)]
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
@@ -12,13 +13,17 @@ use core::panic::PanicInfo;
 use osos::{
     memory::{allocator, paging},
     print, println, serial_println,
+    task::{executor::Executor, keyboard, Task},
+    vga::{self, init_logger},
 };
-use x86_64::{structures::paging::Page, VirtAddr};
+use x86_64::VirtAddr;
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("{info}");
+    // cannot use log crate here for some reason.
+    println!("\n\nPANIC: {info}");
+    serial_println!("{info}");
     osos::hlt_loop();
 }
 
@@ -30,14 +35,21 @@ fn panic(info: &PanicInfo) -> ! {
 
 entry_point!(kernel_main);
 
+const LOGGER: vga::Logger = vga::Logger::new(log::LevelFilter::Trace);
+
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    init_logger(&LOGGER);
+
     print!("Hello, World!");
-    print!("!!!~ ");
+    println!("!!!~ ");
 
     serial_println!("Hello, serial0!");
 
-    // init stuf
+    // init os stuf
     osos::init();
+
+    #[cfg(test)]
+    test_main();
 
     let phys_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { paging::init_offset_table(phys_offset) };
@@ -46,35 +58,31 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
 
     // test heap
-    let mut suse = alloc::vec![1, 2, 3];
-    print!(" {suse:?}, ");
-    suse.push(10);
-    print!("now {suse:?}, ");
-    suse.pop();
-    suse.pop();
-    println!("now {suse:?}!");
+    {
+        let mut suse = alloc::vec![1, 2, 3];
+        print!("{suse:?}, ");
 
-    // test example mapping
-    let page = Page::containing_address(VirtAddr::zero());
-    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-    
-    paging::example_mapping(page, &mut mapper, &mut frame_allocator);
+        suse.push(10);
 
-    unsafe {
-        // each 4 hex digit is a vga char
-        // first 2 hex digits (from left) = fg and bg bytes (see vga::Char)
-        // last 2 hex digits (from left) = ascii code point
-        page_ptr.offset(400).write_volatile(0xD354_D050_D041);
+        // sleep some
+        for _ in 0..2_000_000 {
+            x86_64::instructions::nop();
+        }
+
+        print!("now {suse:?}, ");
+
+        suse.pop();
+        suse.pop();
+
+        for _ in 0..2_000_000 {
+            x86_64::instructions::nop();
+        }
+        println!("now {suse:?}!");
     }
 
-    unsafe {
-        println!("\n{}", *(0xfe0e as *const usize));
-    }
+    log::error!("We are done!");
 
-    #[cfg(test)]
-    test_main();
-
-    println!("We are done");
-
-    osos::hlt_loop();
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
 }

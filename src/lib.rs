@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::panic)]
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
@@ -5,27 +7,38 @@
 #![test_runner(crate::runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
 pub mod qemu;
 pub mod serial;
 pub mod vga;
 
 pub mod gdt;
-pub mod interrupts;
+pub mod interrupt;
 
 pub mod memory;
 
+pub mod task;
+
 use core::{any, panic::PanicInfo};
 
+use log::trace;
 use x86_64::instructions;
 
-/// initialize what needs to be initialized
+/// initialize
+/// - gdt
+/// - idt
+/// - PICs
+/// - interrupts
 pub fn init() {
+    trace!("first init");
     gdt::init();
-    interrupts::init_idt();
-    unsafe { interrupts::PICS.lock().initialize() };
+    interrupt::init_idt();
+    unsafe { interrupt::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 }
 
+#[inline]
 pub fn hlt_loop() -> ! {
     loop {
         instructions::hlt();
@@ -56,10 +69,8 @@ pub fn runner(tests: &[&dyn Testable]) {
 bootloader::entry_point!(test_kernel_main);
 
 #[cfg(test)]
-fn test_kernel_main(boot_info: &'static bootloader::BootInfo) -> ! {
-    use bootloader::BootInfo;
-
-    interrupts::init_idt();
+fn test_kernel_main(_boot_info: &'static bootloader::BootInfo) -> ! {
+    interrupt::init_idt();
     test_main();
     hlt_loop();
 }
