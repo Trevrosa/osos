@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic)]
+#![deny(clippy::panic)]
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
@@ -12,7 +13,7 @@ use core::panic::PanicInfo;
 use osos::{
     memory::{allocator, paging},
     print, println, serial_println,
-    task::{executor::SimpleExecutor, keyboard, Task},
+    task::{executor::Executor, keyboard, Task},
     vga::{self, init_logger},
 };
 use x86_64::VirtAddr;
@@ -20,9 +21,8 @@ use x86_64::VirtAddr;
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    use log::error;
-
-    error!("{info}");
+    // cannot use log crate here for some reason.
+    println!("\n\nPANIC: {info}");
     serial_println!("{info}");
     osos::hlt_loop();
 }
@@ -65,7 +65,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         suse.push(10);
 
         // sleep some
-        for _ in 0..2000000 {
+        for _ in 0..2_000_000 {
             x86_64::instructions::nop();
         }
 
@@ -74,7 +74,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         suse.pop();
         suse.pop();
 
-        for _ in 0..2000000 {
+        for _ in 0..2_000_000 {
             x86_64::instructions::nop();
         }
         println!("now {suse:?}!");
@@ -82,9 +82,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     log::error!("We are done!");
 
-    let mut executor = SimpleExecutor::new();
+    let mut executor = Executor::new();
     executor.spawn(Task::new(keyboard::print_keypresses()));
     executor.run();
-
-    osos::hlt_loop();
 }

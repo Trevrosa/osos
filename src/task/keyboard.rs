@@ -6,7 +6,7 @@ use core::{
 use conquer_once::spin::OnceCell;
 use crossbeam_queue::ArrayQueue;
 use futures_util::{task::AtomicWaker, Stream, StreamExt};
-use log::warn;
+use log::{error, warn};
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 
 use crate::{print, vga::WRITER};
@@ -19,10 +19,19 @@ pub struct ScancodeStream {
 
 impl ScancodeStream {
     pub fn new() -> Self {
-        SCANCODE_QUEUE
+        if SCANCODE_QUEUE
             .try_init_once(|| ArrayQueue::new(100))
-            .expect("should only be called once");
+            .is_err()
+        {
+            error!("scancode queue initialised twice");
+        }
         ScancodeStream { _private: () }
+    }
+}
+
+impl Default for ScancodeStream {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -55,7 +64,7 @@ pub async fn print_keypresses() {
                     // backspace
                     DecodedKey::Unicode(character) if character == 0x08 as char => {
                         WRITER.lock().backspace();
-                    },
+                    }
                     DecodedKey::Unicode(character) => print!("{character}"),
                     DecodedKey::RawKey(_) => (),
                 }
@@ -74,7 +83,7 @@ impl Stream for ScancodeStream {
             return Poll::Ready(Some(scancode));
         }
 
-        WAKER.register(&ctx.waker());
+        WAKER.register(ctx.waker());
         if let Some(scancode) = queue.pop() {
             WAKER.take();
             Poll::Ready(Some(scancode))

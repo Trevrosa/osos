@@ -14,7 +14,7 @@ pub static SERIAL0: Lazy<Mutex<SerialPort>> = Lazy::new(|| {
 
 #[macro_export]
 macro_rules! serial_print {
-    ($($arg:tt)*) => ($crate::serial::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::serial::private_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -24,7 +24,7 @@ macro_rules! serial_println {
 }
 
 #[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
+pub fn private_print(args: fmt::Arguments) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         SERIAL0.lock().write_fmt(args).unwrap();
     });

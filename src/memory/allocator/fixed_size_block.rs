@@ -29,7 +29,14 @@ fn list_index(layout: &Layout) -> Option<usize> {
     BLOCK_SIZES.iter().position(|&s| s >= required_block_size)
 }
 
+impl Default for Allocator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Allocator {
+    #[must_use]
     pub const fn new() -> Self {
         const EMPTY: Option<&'static mut ListNode> = None;
         Self {
@@ -70,13 +77,13 @@ unsafe impl GlobalAlloc for Locked<Allocator> {
 
         if let Some(idx) = list_index(&layout) {
             if let Some(node) = allocator.list_heads[idx].take() {
-                node as *mut ListNode as *mut u8
+                ptr::from_mut::<ListNode>(node).cast::<u8>()
             } else {
                 let block_size = BLOCK_SIZES[idx];
                 let block_align = block_size;
 
                 let layout = Layout::from_size_align(block_size, block_align)
-                    .expect("ERROR: failed to create layout when allocating");
+                    .expect("failed to create layout when allocating");
                 allocator.fallback_alloc(layout)
             }
         } else {
@@ -96,7 +103,8 @@ unsafe impl GlobalAlloc for Locked<Allocator> {
             assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
             assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
 
-            let new_node_ptr = ptr as *mut ListNode;
+            #[allow(clippy::cast_ptr_alignment)]
+            let new_node_ptr = ptr.cast::<ListNode>();
             new_node_ptr.write(new_node);
 
             allocator.list_heads[index] = Some(&mut *new_node_ptr);

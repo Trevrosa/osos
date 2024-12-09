@@ -3,7 +3,10 @@ pub mod keyboard;
 
 use alloc::boxed::Box;
 use core::{
-    future::Future, pin::Pin, sync::atomic::{AtomicU64, Ordering}, task::{Context, Poll}
+    future::Future,
+    pin::Pin,
+    sync::atomic::{AtomicU64, Ordering},
+    task::{Context, Poll},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::panic)]
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
@@ -36,6 +38,7 @@ pub fn init() {
     x86_64::instructions::interrupts::enable();
 }
 
+#[inline]
 pub fn hlt_loop() -> ! {
     loop {
         instructions::hlt();
@@ -66,9 +69,7 @@ pub fn runner(tests: &[&dyn Testable]) {
 bootloader::entry_point!(test_kernel_main);
 
 #[cfg(test)]
-fn test_kernel_main(boot_info: &'static bootloader::BootInfo) -> ! {
-    use bootloader::BootInfo;
-
+fn test_kernel_main(_boot_info: &'static bootloader::BootInfo) -> ! {
     interrupt::init_idt();
     test_main();
     hlt_loop();

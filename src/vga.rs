@@ -4,11 +4,9 @@ use core::{
 };
 
 use conquer_once::spin::Lazy;
-use log::{Level, LevelFilter, Log};
+use log::{LevelFilter, Log};
 use spin::Mutex;
 use volatile::Volatile;
-
-use crate::serial_println;
 
 const VGA_BUFFER: *mut Buffer = 0xb8000 as *mut Buffer;
 
@@ -24,12 +22,15 @@ pub struct Logger {
     pub verbosity: LevelFilter,
 }
 
+/// # Panics
+/// Will panic if a logger has already been set
 pub fn init_logger(logger: &'static Logger) {
     log::set_logger(logger).expect("failed to initialize vga logger");
     log::set_max_level(logger.verbosity);
 }
 
 impl Logger {
+    #[must_use]
     pub const fn new(verbosity: LevelFilter) -> Self {
         Self { verbosity }
     }
@@ -42,10 +43,11 @@ impl Log for Logger {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             crate::println!(
-                "{}->{}: {}",
+                "{}:{}->{}: {}",
                 record.module_path().unwrap(),
+                record.line().unwrap(),
                 record.level(),
-                record.args().as_str().unwrap()
+                record.args().as_str().unwrap_or("no msg ??"),
             );
         }
     }
@@ -57,7 +59,7 @@ impl Log for Logger {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::vga::private_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -67,7 +69,7 @@ macro_rules! println {
 }
 
 #[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
+pub fn private_print(args: fmt::Arguments) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         WRITER.lock().write_fmt(args).unwrap();
     });
@@ -187,13 +189,13 @@ impl Writer {
 
     pub fn backspace(&mut self) {
         if self.column_pos == 0 {
-            return
+            return;
         }
 
         self.column_pos -= 1;
         self.buffer.chars[BUFFER_HEIGHT - 1][self.column_pos].write(Char {
             ascii_char: 0x0,
-            color_code: ColorCode::new(Color::Black, Color::Black)
+            color_code: ColorCode::new(Color::Black, Color::Black),
         });
     }
 
