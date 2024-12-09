@@ -80,7 +80,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("now {suse:?}!");
     }
 
+    log::info!("We are done!");
+    log::debug!("We are done!");
+    log::warn!("We are done!");
     log::error!("We are done!");
+    log::trace!("We are done!");
 
     let mut executor = Executor::new();
     executor.spawn(Task::new(keyboard::print_keypresses()));

@@ -42,13 +42,24 @@ impl Log for Logger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            crate::println!(
-                "{}:{}->{}: {}",
+            let color = match record.level() {
+                log::Level::Debug => Color::White,
+                log::Level::Info => Color::LightBlue,
+                log::Level::Error => Color::Red,
+                log::Level::Trace => Color::Blue,
+                log::Level::Warn => Color::Yellow
+            };
+
+            let mut lock = WRITER.lock();
+            lock.write_fmt(format_args!(
+                "{}:{}->",
                 record.module_path().unwrap(),
                 record.line().unwrap(),
-                record.level(),
-                record.args().as_str().unwrap_or("no msg ??"),
-            );
+            )).unwrap();
+
+            lock.write_special_str(record.level().as_str(), color);
+
+            lock.write_fmt(format_args!(": {}\n", record.args().as_str().unwrap_or("no msg ??"))).unwrap();
         }
     }
 
@@ -182,6 +193,33 @@ impl Writer {
             self.buffer.chars[row][col].write(Char {
                 ascii_char: byte,
                 color_code: self.color_code,
+            });
+            self.column_pos += 1;
+        }
+    }
+
+    pub fn write_special_str(&mut self, s: &str, highlight: Color) {
+        for byte in s.bytes() {
+            if byte.is_ascii() {
+                self.write_special(byte, highlight);
+            }
+        }
+    }
+
+    pub fn write_special(&mut self, byte: u8, highlight: Color) {
+        if byte == b'\n' {
+            self.new_line();
+        } else {
+            if self.column_pos >= BUFFER_WIDTH {
+                self.new_line();
+            }
+
+            let row = BUFFER_HEIGHT - 1;
+            let col = self.column_pos;
+
+            self.buffer.chars[row][col].write(Char {
+                ascii_char: byte,
+                color_code: ColorCode::new(Color::Green, highlight),
             });
             self.column_pos += 1;
         }
