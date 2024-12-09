@@ -4,9 +4,11 @@ use core::{
 };
 
 use conquer_once::spin::Lazy;
-use log::{LevelFilter, Log};
+use log::{Level, LevelFilter, Log};
 use spin::Mutex;
 use volatile::Volatile;
+
+use crate::serial_println;
 
 const VGA_BUFFER: *mut Buffer = 0xb8000 as *mut Buffer;
 
@@ -20,6 +22,11 @@ pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| {
 
 pub struct Logger {
     pub verbosity: LevelFilter,
+}
+
+pub fn init_logger(logger: &'static Logger) {
+    log::set_logger(logger).expect("failed to initialize vga logger");
+    log::set_max_level(logger.verbosity);
 }
 
 impl Logger {
@@ -39,7 +46,7 @@ impl Log for Logger {
                 record.module_path().unwrap(),
                 record.level(),
                 record.args().as_str().unwrap()
-            )
+            );
         }
     }
 
@@ -176,6 +183,18 @@ impl Writer {
             });
             self.column_pos += 1;
         }
+    }
+
+    pub fn backspace(&mut self) {
+        if self.column_pos == 0 {
+            return
+        }
+
+        self.column_pos -= 1;
+        self.buffer.chars[BUFFER_HEIGHT - 1][self.column_pos].write(Char {
+            ascii_char: 0x0,
+            color_code: ColorCode::new(Color::Black, Color::Black)
+        });
     }
 
     fn new_line(&mut self) {

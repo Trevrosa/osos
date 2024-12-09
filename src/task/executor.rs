@@ -1,6 +1,7 @@
 use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 
 use alloc::collections::vec_deque::VecDeque;
+use log::trace;
 
 use super::Task;
 
@@ -23,8 +24,9 @@ impl SimpleExecutor {
         while let Some(mut task) = self.task_queue.pop_front() {
             let waker = dummy_waker();
             let mut ctx = Context::from_waker(&waker);
+            trace!("polling {ctx:?}");
             match task.poll(&mut ctx) {
-                Poll::Ready(()) => {}
+                Poll::Ready(()) => {} // done
                 Poll::Pending => self.task_queue.push_back(task),
             }
         }
