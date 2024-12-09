@@ -21,7 +21,7 @@ use x86_64::VirtAddr;
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    // cannot use log crate here for some reason.
+    // cannot use Logger here since it can panic
     println!("\n\nPANIC: {info}");
     serial_println!("{info}");
     osos::hlt_loop();
