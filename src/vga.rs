@@ -3,10 +3,13 @@ use core::{
     ops::Deref,
 };
 
+use alloc::format;
 use conquer_once::spin::Lazy;
 use log::{LevelFilter, Log};
 use spin::Mutex;
 use volatile::Volatile;
+
+use crate::memory::allocator::HEAP_INITIALIZED;
 
 const VGA_BUFFER: *mut Buffer = 0xb8000 as *mut Buffer;
 
@@ -52,21 +55,34 @@ impl Log for Logger {
                 log::Level::Warn => Color::Yellow,
             };
 
-            let mut lock = WRITER.lock();
-            lock.write_fmt(format_args!(
-                "{}:{}->",
-                record.module_path().unwrap(),
-                record.line().unwrap(),
-            ))
-            .unwrap();
+            if !HEAP_INITIALIZED.is_initialized() {
+                crate::println!(
+                    "{}:{}->{}: {}",
+                    record.module_path().unwrap(),
+                    record.line().unwrap(),
+                    record.level().as_str(),
+                    record.args().as_str().unwrap_or("no log ??")
+                );
+                return;
+            }
 
-            lock.write_special_str(record.level().as_str(), color);
+            let message: &[ColoredStr] = &[
+                (
+                    &format!(
+                        "{}:{}->",
+                        record.module_path().unwrap(),
+                        record.line().unwrap()
+                    ),
+                    None,
+                ),
+                (record.level().as_str(), Some(color)),
+                (
+                    &format!(": {}\n", record.args().as_str().unwrap_or("no log ??")),
+                    None,
+                ),
+            ];
 
-            lock.write_fmt(format_args!(
-                ": {}\n",
-                record.args().as_str().unwrap_or("no msg ??")
-            ))
-            .unwrap();
+            WRITER.lock().write_log(message);
         }
     }
 
@@ -164,6 +180,8 @@ impl fmt::Write for Writer {
     }
 }
 
+type ColoredStr<'a> = (&'a str, Option<Color>);
+
 impl Writer {
     pub fn new(color_code: ColorCode, buffer: &'static mut Buffer) -> Self {
         Self {
@@ -178,15 +196,23 @@ impl Writer {
     pub fn write_str(&mut self, s: &str) {
         for byte in s.bytes() {
             if byte.is_ascii() {
-                self.write_byte(byte);
+                self.write_byte(byte, Some(COLOR_CODE.1));
             } else {
                 // ■ character in vga
-                self.write_byte(0xfe);
+                self.write_byte(0xfe, Some(COLOR_CODE.1));
             }
         }
     }
 
-    pub fn write_byte(&mut self, byte: u8) {
+    pub fn write_log(&mut self, message: &[ColoredStr]) {
+        for part in message {
+            for byte in part.0.bytes() {
+                self.write_byte(byte, part.1);
+            }
+        }
+    }
+
+    fn write_byte(&mut self, byte: u8, background: Option<Color>) {
         if byte == b'\n' {
             self.new_line();
         } else {
@@ -197,36 +223,10 @@ impl Writer {
             let row = BUFFER_HEIGHT - 1;
             let col = self.column_pos;
 
+            let background = background.unwrap_or(COLOR_CODE.1);
             self.buffer.chars[row][col].write(Char {
                 ascii_char: byte,
-                color_code: self.color_code,
-            });
-            self.column_pos += 1;
-        }
-    }
-
-    pub fn write_special_str(&mut self, s: &str, highlight: Color) {
-        for byte in s.bytes() {
-            if byte.is_ascii() {
-                self.write_special(byte, highlight);
-            }
-        }
-    }
-
-    pub fn write_special(&mut self, byte: u8, highlight: Color) {
-        if byte == b'\n' {
-            self.new_line();
-        } else {
-            if self.column_pos >= BUFFER_WIDTH {
-                self.new_line();
-            }
-
-            let row = BUFFER_HEIGHT - 1;
-            let col = self.column_pos;
-
-            self.buffer.chars[row][col].write(Char {
-                ascii_char: byte,
-                color_code: ColorCode::new(COLOR_CODE.0, highlight),
+                color_code: ColorCode::new(COLOR_CODE.0, background),
             });
             self.column_pos += 1;
         }

@@ -2,6 +2,7 @@ pub mod fixed_size_block;
 
 use core::ops::Deref;
 
+use conquer_once::spin::OnceCell;
 use log::trace;
 use x86_64::{
     structures::paging::{
@@ -12,6 +13,8 @@ use x86_64::{
 
 pub const HEAP_START: usize = 0x4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 kib
+
+pub static HEAP_INITIALIZED: OnceCell<()> = OnceCell::uninit();
 
 #[global_allocator]
 static ALLOCATOR: Locked<fixed_size_block::Allocator> =
@@ -72,5 +75,6 @@ pub fn init_heap(
         ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
 
+    HEAP_INITIALIZED.init_once(|| ());
     Ok(())
 }
