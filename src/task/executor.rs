@@ -2,7 +2,7 @@ use core::task::{Context, Poll, Waker};
 
 use alloc::{collections::btree_map::BTreeMap, sync::Arc, task::Wake};
 use crossbeam_queue::ArrayQueue;
-use log::error;
+use log::{debug, error};
 use x86_64::instructions::interrupts;
 
 use super::{Task, TaskId};
@@ -73,6 +73,7 @@ impl Executor {
     }
 
     pub fn run(&mut self) -> ! {
+        debug!("executor run");
         loop {
             self.run_ready_tasks();
             self.sleep_if_idle();

@@ -3,7 +3,7 @@ pub mod fixed_size_block;
 use core::ops::Deref;
 
 use conquer_once::spin::OnceCell;
-use log::trace;
+use log::info;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
@@ -14,6 +14,7 @@ use x86_64::{
 pub const HEAP_START: usize = 0x4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 kib
 
+/// if the `OnceCell` is initialized, the heap is also initialized
 pub static HEAP_INITIALIZED: OnceCell<()> = OnceCell::uninit();
 
 #[global_allocator]
@@ -45,11 +46,15 @@ impl<A> Deref for Locked<A> {
 /// # Errors
 ///
 /// Will error if the memory mapping fails. See [`MapToError`]
+///
+/// # Panics
+///
+/// Will panic if heap is already initialised
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) -> Result<(), MapToError<Size4KiB>> {
-    trace!("initialising heap");
+    info!("initialising heap");
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
         let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
@@ -75,6 +80,8 @@ pub fn init_heap(
         ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
 
-    HEAP_INITIALIZED.init_once(|| ());
+    HEAP_INITIALIZED
+        .try_init_once(|| ())
+        .expect("heap already initialized?");
     Ok(())
 }

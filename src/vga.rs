@@ -55,6 +55,7 @@ impl Log for Logger {
                 log::Level::Warn => Color::Yellow,
             };
 
+            // the rest requires String, which requires a heap
             if !HEAP_INITIALIZED.is_initialized() {
                 crate::println!(
                     "{}:{}->{}: {}",
@@ -66,7 +67,7 @@ impl Log for Logger {
                 return;
             }
 
-            let message: &[ColoredStr] = &[
+            let message: &[(&str, Option<Color>); 3] = &[
                 (
                     &format!(
                         "{}:{}->",
@@ -180,8 +181,6 @@ impl fmt::Write for Writer {
     }
 }
 
-type ColoredStr<'a> = (&'a str, Option<Color>);
-
 impl Writer {
     pub fn new(color_code: ColorCode, buffer: &'static mut Buffer) -> Self {
         Self {
@@ -193,8 +192,8 @@ impl Writer {
 }
 
 impl Writer {
-    pub fn write_str(&mut self, s: &str) {
-        for byte in s.bytes() {
+    pub fn write_str(&mut self, s: impl AsRef<str>) {
+        for byte in s.as_ref().bytes() {
             if byte.is_ascii() {
                 self.write_byte(byte, Some(COLOR_CODE.1));
             } else {
@@ -204,9 +203,10 @@ impl Writer {
         }
     }
 
-    pub fn write_log(&mut self, message: &[ColoredStr]) {
-        for part in message {
-            for byte in part.0.bytes() {
+    /// used to write logs with color
+    pub fn write_log<T: AsRef<str>>(&mut self, log_parts: &[(T, Option<Color>)]) {
+        for part in log_parts {
+            for byte in part.0.as_ref().bytes() {
                 self.write_byte(byte, part.1);
             }
         }
@@ -223,10 +223,15 @@ impl Writer {
             let row = BUFFER_HEIGHT - 1;
             let col = self.column_pos;
 
-            let background = background.unwrap_or(COLOR_CODE.1);
+            let color_code = if let Some(background) = background {
+                ColorCode::new(COLOR_CODE.0, background)
+            } else {
+                self.color_code
+            };
+
             self.buffer.chars[row][col].write(Char {
                 ascii_char: byte,
-                color_code: ColorCode::new(COLOR_CODE.0, background),
+                color_code,
             });
             self.column_pos += 1;
         }
@@ -239,8 +244,8 @@ impl Writer {
 
         self.column_pos -= 1;
         self.buffer.chars[BUFFER_HEIGHT - 1][self.column_pos].write(Char {
-            ascii_char: 0x0,
-            color_code: ColorCode::new(Color::Black, Color::Black),
+            ascii_char: b' ',
+            color_code: self.color_code,
         });
     }
 

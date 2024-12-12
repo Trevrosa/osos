@@ -8,7 +8,7 @@ pub enum ExitCode {
     Failed = 0x11,
 }
 
-#[allow(unused)]
+/// exit qemu
 pub fn exit(exit_code: ExitCode) {
     unsafe {
         let mut port = Port::new(0xf4);

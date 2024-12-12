@@ -22,7 +22,7 @@ pub mod task;
 
 use core::{any, panic::PanicInfo};
 
-use log::trace;
+use log::info;
 use x86_64::instructions;
 
 /// initialize
@@ -31,7 +31,7 @@ use x86_64::instructions;
 /// - PICs
 /// - interrupts
 pub fn init() {
-    trace!("first init");
+    info!("first init");
     gdt::init();
     interrupt::init_idt();
     unsafe { interrupt::PICS.lock().initialize() };

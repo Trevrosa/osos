@@ -1,4 +1,5 @@
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
+use log::debug;
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
@@ -72,6 +73,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 /// - The caller must ensure the complete physical memory is mapped to virtual memory at the `phys_offset` given.
 #[must_use]
 pub unsafe fn init_offset_table(phys_offset: VirtAddr) -> OffsetPageTable<'static> {
+    debug!("page offset table init");
     let level_4_table = active_level_4_table(phys_offset);
     OffsetPageTable::new(level_4_table, phys_offset)
 }
