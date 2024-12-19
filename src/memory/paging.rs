@@ -1,5 +1,5 @@
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
-use log::debug;
+use log::{debug, trace};
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
@@ -73,12 +73,16 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 /// - The caller must ensure the complete physical memory is mapped to virtual memory at the `phys_offset` given.
 #[must_use]
 pub unsafe fn init_offset_table(phys_offset: VirtAddr) -> OffsetPageTable<'static> {
-    debug!("page offset table init");
+    trace!("page offset table init");
     let level_4_table = active_level_4_table(phys_offset);
-    OffsetPageTable::new(level_4_table, phys_offset)
+    let offset_table = OffsetPageTable::new(level_4_table, phys_offset);
+    debug!("page offset table ready");
+
+    offset_table
 }
 
-#[allow(clippy::missing_panics_doc, reason = "use as example only")]
+#[allow(clippy::missing_panics_doc, reason = "fn used as example only")]
+#[allow(clippy::expect_used, reason = "fn used as example")]
 pub fn example_mapping(
     page: Page,
     mapper: &mut OffsetPageTable,
@@ -91,6 +95,5 @@ pub fn example_mapping(
         // not safe
         mapper.map_to(page, frame, flags, frame_allocator)
     };
-
     map_to_result.expect("map_to failed").flush();
 }

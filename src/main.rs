@@ -1,5 +1,4 @@
 #![warn(clippy::pedantic)]
-#![deny(clippy::panic)]
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
@@ -80,11 +79,12 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("now {suse:?}!");
     }
 
-    log::info!("We are done!");
-    log::debug!("We are done!");
-    log::warn!("We are done!");
-    log::error!("We are done!");
+    log::debug!("Debug!");
+    log::warn!("Warn!");
+    log::error!("Error!");
     log::trace!("Tracing!");
+
+    log::info!("We are done!");
 
     let mut executor = Executor::new();
     executor.spawn(Task::new(keyboard::print_keypresses()));

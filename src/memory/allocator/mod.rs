@@ -3,7 +3,7 @@ pub mod fixed_size_block;
 use core::ops::Deref;
 
 use conquer_once::spin::OnceCell;
-use log::info;
+use log::{info, trace};
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
@@ -54,7 +54,7 @@ pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) -> Result<(), MapToError<Size4KiB>> {
-    info!("initialising heap");
+    trace!("initialising heap");
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
         let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
@@ -80,8 +80,12 @@ pub fn init_heap(
         ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
 
+    #[allow(clippy::expect_used, reason = "heap cannot be initialized twice")]
     HEAP_INITIALIZED
         .try_init_once(|| ())
         .expect("heap already initialized?");
+
+    info!("heap initialized");
+
     Ok(())
 }

@@ -8,6 +8,7 @@ use conquer_once::spin::Lazy;
 use log::{LevelFilter, Log};
 use spin::Mutex;
 use volatile::Volatile;
+use x86_64::instructions::interrupts::without_interrupts;
 
 use crate::memory::allocator::HEAP_INITIALIZED;
 
@@ -30,6 +31,10 @@ pub struct Logger {
 /// # Panics
 /// Will panic if a logger has already been set
 pub fn init_logger(logger: &'static Logger) {
+    #[allow(
+        clippy::expect_used,
+        reason = "no reason to continue execution without logger"
+    )]
     log::set_logger(logger).expect("failed to initialize vga logger");
     log::set_max_level(logger.verbosity);
 }
@@ -83,7 +88,9 @@ impl Log for Logger {
                 ),
             ];
 
-            WRITER.lock().write_log(message);
+            without_interrupts(|| {
+                WRITER.lock().write_log(message);
+            });
         }
     }
 
@@ -194,21 +201,25 @@ impl Writer {
 impl Writer {
     pub fn write_str(&mut self, s: impl AsRef<str>) {
         for byte in s.as_ref().bytes() {
-            if byte.is_ascii() {
-                self.write_byte(byte, Some(COLOR_CODE.1));
-            } else {
-                // ■ character in vga
-                self.write_byte(0xfe, Some(COLOR_CODE.1));
+            self.handle_byte(byte, None);
+        }
+    }
+
+    // used to write logs with color
+    pub fn write_log<T: AsRef<str>>(&mut self, log_parts: &[(T, Option<Color>)]) {
+        for part in log_parts {
+            for byte in part.0.as_ref().bytes() {
+                self.handle_byte(byte, part.1);
             }
         }
     }
 
-    /// used to write logs with color
-    pub fn write_log<T: AsRef<str>>(&mut self, log_parts: &[(T, Option<Color>)]) {
-        for part in log_parts {
-            for byte in part.0.as_ref().bytes() {
-                self.write_byte(byte, part.1);
-            }
+    fn handle_byte(&mut self, byte: u8, background: Option<Color>) {
+        if byte.is_ascii() {
+            self.write_byte(byte, background);
+        } else {
+            // ■ character in vga
+            self.write_byte(0xfe, background);
         }
     }
 

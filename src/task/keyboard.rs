@@ -8,6 +8,7 @@ use crossbeam_queue::ArrayQueue;
 use futures_util::{task::AtomicWaker, Stream, StreamExt};
 use log::{error, warn};
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+use x86_64::instructions::interrupts::without_interrupts;
 
 use crate::{print, vga::WRITER};
 
@@ -63,7 +64,9 @@ pub async fn print_keypresses() {
                 match key {
                     // backspace
                     DecodedKey::Unicode(character) if character == 0x08 as char => {
-                        WRITER.lock().backspace();
+                        without_interrupts(|| {
+                            WRITER.lock().backspace();
+                        });
                     }
                     DecodedKey::Unicode(character) => print!("{character}"),
                     DecodedKey::RawKey(_) => (),
@@ -77,6 +80,7 @@ impl Stream for ScancodeStream {
     type Item = u8;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        #[allow(clippy::expect_used, reason = "cannot continue if queue not init")]
         let queue = SCANCODE_QUEUE.try_get().expect("scancode queue not init");
 
         if let Some(scancode) = queue.pop() {

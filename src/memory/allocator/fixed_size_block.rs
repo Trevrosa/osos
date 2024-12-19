@@ -82,6 +82,10 @@ unsafe impl GlobalAlloc for Locked<Allocator> {
                 let block_size = BLOCK_SIZES[idx];
                 let block_align = block_size;
 
+                #[allow(
+                    clippy::expect_used,
+                    reason = "no way to return *mut u8 here if this fails"
+                )]
                 let layout = Layout::from_size_align(block_size, block_align)
                     .expect("failed to create layout when allocating");
                 allocator.fallback_alloc(layout)

@@ -1,5 +1,5 @@
 #![warn(clippy::pedantic)]
-#![deny(clippy::panic)]
+#![warn(clippy::panic, clippy::expect_used)]
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
@@ -22,7 +22,7 @@ pub mod task;
 
 use core::{any, panic::PanicInfo};
 
-use log::info;
+use log::{info, trace};
 use x86_64::instructions;
 
 /// initialize
@@ -31,11 +31,12 @@ use x86_64::instructions;
 /// - PICs
 /// - interrupts
 pub fn init() {
-    info!("first init");
+    trace!("first init start");
     gdt::init();
     interrupt::init_idt();
     unsafe { interrupt::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
+    info!("first init done");
 }
 
 #[inline]
