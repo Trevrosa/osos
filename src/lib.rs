@@ -22,6 +22,43 @@ pub mod task;
 
 use core::{any, panic::PanicInfo};
 
+pub type Board = Vec<Vec<Option<bool>>>;
+use alloc::vec::Vec;
+
+pub static BOARD: spin::Mutex<Board> = spin::Mutex::new(Vec::new());
+
+pub static STATE: spin::Mutex<bool> = spin::Mutex::new(true);
+
+pub fn print_board() {
+    println!();
+
+    let board = BOARD.lock();
+    for i in 0..=2 {
+        let row: &[Option<bool>] = &board[i];
+        for j in 0..=2 {
+            let col: &Option<bool> = &row[j];
+            let col = match col {
+                Some(c) => {
+                    if *c {
+                        "X"
+                    } else {
+                        "O"
+                    }
+                }
+                None => "_",
+            };
+            print!("{col}");
+        }
+        println!();
+    }
+}
+pub fn clear_board() {
+    let mut board = BOARD.lock();
+    board.clear();
+    board.push([None, None, None].to_vec());
+    board.push([None, None, None].to_vec());
+    board.push([None, None, None].to_vec());
+}
 use log::info;
 use x86_64::instructions;
 

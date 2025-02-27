@@ -9,7 +9,7 @@ use futures_util::{task::AtomicWaker, Stream, StreamExt};
 use log::{error, warn};
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 
-use crate::{print, vga::WRITER};
+use crate::{print, print_board, vga::WRITER};
 
 static WAKER: AtomicWaker = AtomicWaker::new();
 
@@ -67,6 +67,61 @@ pub async fn print_keypresses() {
                     }
                     DecodedKey::Unicode(character) => print!("{character}"),
                     DecodedKey::RawKey(_) => (),
+                }
+            }
+        }
+    }
+}
+
+pub async fn tic_toe() {
+    let mut scancodes = ScancodeStream::new();
+    let mut keyboard = Keyboard::new(
+        ScancodeSet1::new(),
+        layouts::Us104Key,
+        HandleControl::Ignore,
+    );
+
+    while let Some(scancode) = scancodes.next().await {
+        if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+            if let Some(key) = keyboard.process_keyevent(key_event) {
+                match key {
+                    DecodedKey::Unicode(character) if character == 0x08 as char => {
+                        WRITER.lock().backspace();
+                    }
+                    DecodedKey::Unicode(character) => match character.to_digit(10) {
+                        Some(d) => {
+                            if d == 0 {
+                                *crate::STATE.lock() = true;
+                                crate::clear_board();
+                            } else if d <= 3 {
+                                let mut state = crate::STATE.lock();
+                                let mut board = crate::BOARD.lock();
+                                if board[0][d as usize - 1].is_none() {
+                                    board[0][d as usize - 1] = Some(*state);
+                                    *state = !*state;
+                                }
+                            } else if d <= 6 {
+                                let mut state = crate::STATE.lock();
+                                let mut board = crate::BOARD.lock();
+                                if board[1][d as usize - 3- 1].is_none() {
+                                    board[1][d as usize - 3 - 1] = Some(*state);
+                                    *state = !*state;
+                                }
+                            } else if d <= 9 {
+                                let mut state = crate::STATE.lock();
+                                let mut board = crate::BOARD.lock();
+                                if board[2][d as usize - 6 - 1].is_none() {
+                                    board[2][d as usize - 6 - 1] = Some(*state);
+                                    *state = !*state;
+                                }
+                            } else {
+                                crate::print!("{d}");
+                            }
+                            print_board();
+                        }
+                        None => crate::print!("{character}"),
+                    },
+                    _ => (),
                 }
             }
         }

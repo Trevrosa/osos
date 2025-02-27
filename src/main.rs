@@ -86,7 +86,22 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     log::error!("We are done!");
     log::trace!("Tracing!");
 
+    use osos::BOARD;
+
+    // true is x, false is o
+    // row1
+    BOARD.lock().push([None, None, None].to_vec());
+    // row2
+    BOARD.lock().push([None, None, None].to_vec());
+    // row 3
+    BOARD.lock().push([None, None, None].to_vec());
+
+    osos::print_board();
+
+    // false is O
+
     let mut executor = Executor::new();
-    executor.spawn(Task::new(keyboard::print_keypresses()));
+    // executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.spawn(Task::new(keyboard::tic_toe()));
     executor.run()
 }
